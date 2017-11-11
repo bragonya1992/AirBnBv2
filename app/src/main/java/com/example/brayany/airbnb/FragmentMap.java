@@ -47,8 +47,6 @@ public class FragmentMap extends Fragment {
                 // For dropping a marker at a point on the Map
                 LatLng sydney = new LatLng(34.046170784751794, -118.24772816403042);
                 googleMap.addMarker(new MarkerOptions().position(sydney).title("Los Angeles").snippet("Current position"));
-
-                // For zooming automatically to the location of the marker
                 CameraPosition cameraPosition = new CameraPosition.Builder().target(sydney).zoom(12).build();
                 googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
             }
@@ -63,7 +61,8 @@ public class FragmentMap extends Fragment {
         if(markerM!=null)
             markerM.remove();
         markerM =googleMap.addMarker(new MarkerOptions().position(LA).title(marker));
-        googleMap.moveCamera(CameraUpdateFactory.newLatLng(LA));
+        CameraPosition cameraPosition = new CameraPosition.Builder().target(LA).zoom(12).build();
+        googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
     }
 
     @Override

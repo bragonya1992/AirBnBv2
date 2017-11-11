@@ -88,6 +88,7 @@ public class MainActivity extends AppCompatActivity
 
     private  void setupViewPager(){
         mViewPager = (ViewPager)findViewById(R.id.pager);
+        mViewPager.setOffscreenPageLimit(3);
         mPagerAdapter = new MyFragmentAdapter(getSupportFragmentManager(),fragments);
         mViewPager.setAdapter(mPagerAdapter);
     };
@@ -118,8 +119,8 @@ public class MainActivity extends AppCompatActivity
             latitudeGPS = location.getLatitude();
             if(!isMyRealData) {
                 Toast.makeText(getApplicationContext(),"Data update by GPS!",Toast.LENGTH_SHORT).show();
+                fragmentMap.moveCameraTo(latitudeGPS,longitudeGPS,"Current location");
                 fragmentList.initView();
-                fragmentMap.moveCameraTo(longitudeGPS,latitudeGPS,"Current ubication");
             }
         }
 
@@ -188,6 +189,7 @@ public class MainActivity extends AppCompatActivity
         if (id == R.id.nav_fav) {
             // Handle the camera action
             mViewPager.setCurrentItem(2);
+            fragmentFav.initView();
         } else if (id == R.id.nav_list) {
             mViewPager.setCurrentItem(1);
 
@@ -202,6 +204,7 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onClick(Double latitude, Double longitude, String marker) {
+        mViewPager.getAdapter().notifyDataSetChanged();
         mViewPager.setCurrentItem(0);
         fragmentMap.moveCameraTo(latitude,longitude,marker);
     }
@@ -214,5 +217,6 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void deleteFav(String name) {
         database.delete(name,this);
+        fragmentFav.initView();
     }
 }

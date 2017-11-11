@@ -62,7 +62,7 @@ public class Fragment_list extends Fragment {
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        myRecycler = getView().findViewById(R.id.recycler);
+        myRecycler =(RecyclerView) getView().findViewById(R.id.recycler);
         myRecycler.setHasFixedSize(true);
         myRecycler.setLayoutManager(new LinearLayoutManager(getActivity()));
         initView();

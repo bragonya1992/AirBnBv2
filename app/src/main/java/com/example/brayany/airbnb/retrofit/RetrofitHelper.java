@@ -32,6 +32,7 @@ public class RetrofitHelper {
 
         RestClient restClient = retrofit.create(RestClient.class);
         Call<AirBnBObject> call = restClient.getData(limit,longitude,latitude);
+        Log.d("Retrofit",call.request().url().toString());
 
         Log.d("Retrofit",retrofit.baseUrl().url().toString());
 

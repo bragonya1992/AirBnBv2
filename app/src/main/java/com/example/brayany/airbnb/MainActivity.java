@@ -1,12 +1,15 @@
 package com.example.brayany.airbnb;
 
 import android.Manifest;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
@@ -18,17 +21,27 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
+import com.example.brayany.airbnb.geofence.GeofenceTransitionsIntentService;
 import com.example.brayany.airbnb.interfaces.OnClickItem;
+import com.example.brayany.airbnb.retrofit.AirBnBObject;
 import com.example.brayany.airbnb.retrofit.SearchResult;
 import com.example.brayany.airbnb.storage.database;
+import com.google.android.gms.location.Geofence;
+import com.google.android.gms.location.GeofencingClient;
+import com.google.android.gms.location.GeofencingRequest;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 
 
 public class MainActivity extends AppCompatActivity
@@ -44,6 +57,9 @@ public class MainActivity extends AppCompatActivity
     List<Fragment> fragments = new Vector<Fragment>();
     Fragment_list fragmentList;
     Fragment_list fragmentFav;
+    private GeofencingClient mGeofencingClient;
+    private PendingIntent mGeofencePendingIntent;
+    private List<Geofence> mGeofenceList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -105,11 +121,77 @@ public class MainActivity extends AppCompatActivity
             Toast.makeText(this, "GPS isnt enable!", Toast.LENGTH_SHORT).show();
             return;
         }
+        Intent intent = new Intent(MainActivity.this, GeofenceTransitionsIntentService.class);
+        startService(intent);
+        mGeofencingClient = LocationServices.getGeofencingClient(this);
+        mGeofenceList = new ArrayList<>();
+        addGeofence();
+        mGeofencingClient.addGeofences(getGeofencingRequest(), getGeofencePendingIntent())
+                .addOnSuccessListener(this, new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        // Geofences added
+                        // ...
+                        Log.i("Geofence", "onSuccess added");
+                    }
+                })
+                .addOnFailureListener(this, new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        // Failed to add geofences
+                        // ...
+                        Log.e("Geofence", "failed added " + e.getLocalizedMessage());
+                    }
+                });
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2 * 20 * 1000, 10, locationListenerGPS);
+    }
+
+    public void addGeofence(){
+        AirBnBObject object = database.getFromDataBase(getApplicationContext());
+        if(object==null)
+            return;
+        for (SearchResult result: object.getSearchResults()) {
+            int i =0;
+            mGeofenceList.add(new Geofence.Builder()
+                    // Set the request ID of the geofence. This is a string to identify this
+                    // geofence.
+                    .setRequestId(""+i)
+
+                    .setCircularRegion(
+                            result.getListing().getLat(),
+                            result.getListing().getLng(),
+                            1609
+                    )
+                    .setExpirationDuration(1* 60 * 60 * 1000)
+                    .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER |
+                            Geofence.GEOFENCE_TRANSITION_EXIT)
+                    .build());
+            i++;
+        }
+    }
+
+    private GeofencingRequest getGeofencingRequest() {
+        GeofencingRequest.Builder builder = new GeofencingRequest.Builder();
+        builder.setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER);
+        builder.addGeofences(mGeofenceList);
+        return builder.build();
     }
 
     private boolean checkLocation() {
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+    }
+
+    private PendingIntent getGeofencePendingIntent() {
+        // Reuse the PendingIntent if we already have it.
+        if (mGeofencePendingIntent != null) {
+            return mGeofencePendingIntent;
+        }
+        Intent intent = new Intent(this, GeofenceTransitionsIntentService.class);
+        // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when
+        // calling addGeofences() and removeGeofences().
+        mGeofencePendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.
+                FLAG_UPDATE_CURRENT);
+        return mGeofencePendingIntent;
     }
 
 
@@ -119,9 +201,10 @@ public class MainActivity extends AppCompatActivity
             latitudeGPS = location.getLatitude();
             if(!isMyRealData) {
                 Toast.makeText(getApplicationContext(),"Data update by GPS!",Toast.LENGTH_SHORT).show();
-                fragmentMap.moveCameraTo(latitudeGPS,longitudeGPS,"Current location");
-                fragmentList.initView();
+
             }
+            fragmentMap.moveCameraTo(latitudeGPS,longitudeGPS,"Current location");
+            fragmentList.initView();
         }
 
         @Override
